@@ -10,6 +10,7 @@ from langchain_core.documents import Document
 from transformers import AutoTokenizer, T5ForConditionalGeneration
 import torch
 from langchain.chains import RetrievalQA
+from pathlib import Path
 
 class VectorStore:
     def __init__(self):
@@ -283,3 +284,61 @@ class VectorStore:
                 "relevance": f"{(1 - score) * 100:.1f}%"
             } for doc, score in source_docs]
         }]
+
+    def summarize_pdf(self, pdf_path: Path) -> str:
+        """Génère un résumé intelligent du PDF."""
+        try:
+            # Récupérer les chunks du PDF
+            results = []
+            for store in self.vector_stores.values():
+                docs = store.similarity_search(
+                    f"contenu principal de {pdf_path.name}",
+                    k=10,
+                    filter={"source": pdf_path.name}
+                )
+                results.extend(docs)
+            
+            if not results:
+                return "Impossible de générer un résumé pour ce document."
+            
+            # Trier par page et compter les pages
+            results.sort(key=lambda x: x.metadata.get('page', 0))
+            num_pages = max(doc.metadata.get('page', 0) for doc in results)
+            
+            # Préparer le contexte
+            context = "\n".join([doc.page_content for doc in results])
+            
+            # Prompt caché du résultat final
+            inputs = self.tokenizer.encode(
+                f"Résume ce document en expliquant son type, son objectif et ses points clés : {context[:2000]}",
+                return_tensors="pt",
+                max_length=512,
+                truncation=True
+            )
+            
+            if torch.cuda.is_available():
+                inputs = inputs.to("cuda")
+            
+            # Paramètres de génération corrigés
+            outputs = self.model.generate(
+                inputs,
+                max_length=500,
+                min_length=100,
+                do_sample=True,  # Activer l'échantillonnage
+                temperature=0.7,
+                num_beams=4,
+                no_repeat_ngram_size=3
+            )
+            
+            summary = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+            
+            # Formater sans montrer le prompt
+            return f"""# Résumé de {pdf_path.name}
+
+{summary}
+
+Document de {num_pages} pages"""
+            
+        except Exception as e:
+            self.logger.error(f"Erreur lors du résumé: {str(e)}")
+            return "Erreur lors de la génération du résumé."
