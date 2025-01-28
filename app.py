@@ -6,6 +6,7 @@ from components.qa_interface import QAInterface
 from services.vector_store import VectorStore
 from services.pdf_processor import PDFProcessor
 from typing import List, Dict
+from utils.pdf_utils import delete_pdf  # Import depuis utils
 
 def main():
     st.set_page_config(page_title="Recherche dans les PDFs", layout="wide")
@@ -48,6 +49,16 @@ def main():
             type=['pdf'],
             accept_multiple_files=True
         )
+
+        # Afficher les fichiers uploadés avec bouton de suppression
+        for file in uploaded_files:
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                st.write(f"📄 {file.name}")
+            with col2:
+                if st.button("🗑️", key=f"main_delete_{file.name}"):
+                    pdf_path = Path("sources") / file.name
+                    delete_pdf(pdf_path, st.session_state.processed_pdfs)
 
         # Messages de traitement
         if uploaded_files:
