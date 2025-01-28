@@ -20,7 +20,7 @@ class Sidebar:
             
             for pdf in sorted(processed_pdfs):
                 pdf_path = self.sources_dir / pdf
-                col1, col2 = container.columns([4, 1])
+                col1, col2, col3 = container.columns([3, 1, 1])
                 
                 # Bouton pour voir le PDF
                 if col1.button(
@@ -32,8 +32,12 @@ class Sidebar:
                 ):
                     st.session_state.selected_pdf = pdf_path
                 
+                # Bouton pour résumer
+                if col2.button("📝", key=f"sum_{pdf}", help="Résumer ce PDF"):
+                    st.session_state.summarize_pdf = pdf_path
+                
                 # Bouton pour supprimer
-                if col2.button("🗑️", key=f"del_{pdf}", help="Supprimer ce PDF"):
+                if col3.button("🗑️", key=f"del_{pdf}", help="Supprimer ce PDF"):
                     try:
                         # Supprimer le fichier
                         pdf_path.unlink()
