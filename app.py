@@ -87,5 +87,15 @@ def main():
     if selected_pdf_path:
         st.session_state.current_pdf = selected_pdf_path
 
+    # Gérer la demande de résumé
+    if hasattr(st.session_state, 'summarize_pdf') and st.session_state.summarize_pdf:
+        pdf_path = st.session_state.summarize_pdf
+        with st.spinner(f"Génération du résumé de {pdf_path.name}..."):
+            summary = st.session_state.vector_store.summarize_pdf(pdf_path)
+            st.markdown("### 📝 Résumé du document")
+            st.markdown(summary)
+            # Réinitialiser pour ne pas regénérer à chaque refresh
+            st.session_state.summarize_pdf = None
+
 if __name__ == "__main__":
     main()
